@@ -1,0 +1,23 @@
+# Dependencies / build artefacts
+node_modules
+.next
+
+# Git
+.git
+.gitignore
+
+# Local environment secrets – NEVER bake into the image
+.env
+.env.local
+.env*.local
+
+# Runtime data – mounted as Docker volumes at runtime
+expenses.db
+data/
+attachments/
+
+# Dev / editor noise
+*.md
+.DS_Store
+Thumbs.db
+*.log
