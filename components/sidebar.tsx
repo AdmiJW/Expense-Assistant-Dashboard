@@ -12,7 +12,7 @@ interface Props {
 
 export function Sidebar({ userName }: Props) {
   return (
-    <aside className="w-60 flex-shrink-0 flex flex-col sidebar-bg border-r border-sidebar-border">
+    <aside className="h-full w-72 max-w-full flex-shrink-0 flex flex-col sidebar-bg border-r border-sidebar-border md:w-60">
       {/* Logo / title */}
       <div className="px-5 py-5 flex items-center gap-3">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20">

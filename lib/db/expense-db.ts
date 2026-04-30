@@ -14,6 +14,10 @@ export interface Expense {
   updated_at: string
 }
 
+export interface ExpenseWithAttachmentCount extends Expense {
+  attachment_count: number
+}
+
 export interface ExpenseAttachment {
   id: string
   expense_id: string
@@ -48,7 +52,7 @@ export function getExpenses(
   page: number,
   limit: number,
   filters: ExpenseFilters = {}
-): { rows: Expense[]; total: number } {
+): { rows: ExpenseWithAttachmentCount[]; total: number } {
   const db = getDb()
   const offset = (page - 1) * limit
   const { search, dateFrom, dateTo, category, minAmount, maxAmount } = filters
@@ -58,23 +62,34 @@ export function getExpenses(
 
   if (search) {
     const like = `%${search}%`
-    conditions.push("(category LIKE ? OR sub_category LIKE ? OR description LIKE ? OR remark LIKE ?)")
+    conditions.push("(e.category LIKE ? OR e.sub_category LIKE ? OR e.description LIKE ? OR e.remark LIKE ?)")
     params.push(like, like, like, like)
   }
-  if (dateFrom) { conditions.push("date >= ?"); params.push(dateFrom) }
-  if (dateTo)   { conditions.push("date <= ?"); params.push(dateTo) }
-  if (category) { conditions.push("category = ?"); params.push(category) }
-  if (minAmount !== undefined) { conditions.push("amount >= ?"); params.push(minAmount) }
-  if (maxAmount !== undefined) { conditions.push("amount <= ?"); params.push(maxAmount) }
+  if (dateFrom) { conditions.push("e.date >= ?"); params.push(dateFrom) }
+  if (dateTo)   { conditions.push("e.date <= ?"); params.push(dateTo) }
+  if (category) { conditions.push("e.category = ?"); params.push(category) }
+  if (minAmount !== undefined) { conditions.push("e.amount >= ?"); params.push(minAmount) }
+  if (maxAmount !== undefined) { conditions.push("e.amount <= ?"); params.push(maxAmount) }
 
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : ""
 
   const rows = db
-    .prepare(`SELECT * FROM expenses ${where} ORDER BY date DESC LIMIT ? OFFSET ?`)
-    .all(...params, limit, offset) as Expense[]
+    .prepare(
+      `SELECT e.*, COALESCE(ac.attachment_count, 0) as attachment_count
+       FROM expenses e
+       LEFT JOIN (
+         SELECT expense_id, COUNT(*) as attachment_count
+         FROM expense_attachments
+         GROUP BY expense_id
+       ) ac ON ac.expense_id = e.id
+       ${where}
+       ORDER BY e.date DESC
+       LIMIT ? OFFSET ?`
+    )
+    .all(...params, limit, offset) as ExpenseWithAttachmentCount[]
 
   const { total } = db
-    .prepare(`SELECT COUNT(*) as total FROM expenses ${where}`)
+    .prepare(`SELECT COUNT(*) as total FROM expenses e ${where}`)
     .get(...params) as { total: number }
 
   return { rows, total }

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DashboardCharts } from "@/components/dashboard-charts"
+import { formatChineseDate } from "@/lib/date-format"
 import { TrendingDown, CalendarDays, Calendar, Loader2 } from "lucide-react"
 
 const DISPLAY_TIMEZONE = process.env.NEXT_PUBLIC_DISPLAY_TIMEZONE ?? "Asia/Kuala_Lumpur"
@@ -98,10 +99,12 @@ export function DashboardShell() {
   }
 
   const { from, to } = getRange()
-  const rangeLabel = from === to ? from : `${from} ~ ${to}`
+  const rangeLabel = from === to
+    ? formatChineseDate(from)
+    : `${formatChineseDate(from)} ~ ${formatChineseDate(to)}`
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">儀表板</h1>
@@ -124,21 +127,21 @@ export function DashboardShell() {
         ))}
 
         {preset === "custom" && (
-          <div className="flex items-center gap-2 ml-1">
+          <div className="flex flex-wrap items-center gap-2 md:ml-1">
             <Input
               type="date"
               value={customFrom}
               onChange={(e) => setCustomFrom(e.target.value)}
-              className="h-8 w-36 text-sm"
+              className="h-8 w-[calc(50%-1.5rem)] min-w-36 text-sm sm:w-36"
             />
             <span className="text-muted-foreground text-sm">至</span>
             <Input
               type="date"
               value={customTo}
               onChange={(e) => setCustomTo(e.target.value)}
-              className="h-8 w-36 text-sm"
+              className="h-8 w-[calc(50%-1.5rem)] min-w-36 text-sm sm:w-36"
             />
-            <Button size="sm" onClick={handleCustomApply} disabled={!customFrom || !customTo}>
+            <Button className="w-full sm:w-auto" size="sm" onClick={handleCustomApply} disabled={!customFrom || !customTo}>
               查詢
             </Button>
           </div>

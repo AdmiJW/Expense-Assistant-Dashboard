@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import { formatInTimeZone, fromZonedTime } from "date-fns-tz"
+import { fromZonedTime } from "date-fns-tz"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ExpenseForm } from "@/components/expense-form"
 import { AttachmentList } from "@/components/attachment-list"
+import { formatChineseDateTime } from "@/lib/date-format"
 import { toast } from "sonner"
 import {
   Plus, MoreHorizontal, Pencil, Trash2, Paperclip, Search,
@@ -56,6 +57,7 @@ interface Expense {
   description: string
   remark: string | null
   date: string
+  attachment_count: number
 }
 
 interface Props {
@@ -171,20 +173,30 @@ export function ExpenseTable({ timezone }: Props) {
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
   function formatDate(utcIso: string) {
-    return formatInTimeZone(new Date(utcIso), timezone, "yyyy/MM/dd HH:mm")
+    return formatChineseDateTime(utcIso, timezone)
+  }
+
+  function AttachmentCountBadge({ count }: { count: number }) {
+    if (count <= 0) return null
+    return (
+      <Badge variant="secondary" className="w-fit gap-1 px-2 py-0.5 text-xs">
+        <Paperclip className="h-3 w-3" />
+        {count}
+      </Badge>
+    )
   }
 
   return (
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <form onSubmit={handleSearch} className="flex gap-2 w-full sm:w-auto">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <form onSubmit={handleSearch} className="grid w-full grid-cols-[1fr_auto_auto] gap-2 sm:flex sm:w-auto">
             <Input
               placeholder="搜尋類別、說明…"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full sm:w-64"
+              className="min-w-0 sm:w-64"
             />
             <Button type="submit" size="icon" variant="outline">
               <Search className="h-4 w-4" />
@@ -192,7 +204,7 @@ export function ExpenseTable({ timezone }: Props) {
             <Button
               type="button"
               variant={filtersOpen || activeFilterCount > 0 ? "default" : "outline"}
-              className="gap-1.5"
+              className="gap-1.5 px-3"
               onClick={() => setFiltersOpen((v) => !v)}
             >
               <SlidersHorizontal className="h-4 w-4" />
@@ -204,7 +216,7 @@ export function ExpenseTable({ timezone }: Props) {
               )}
             </Button>
           </form>
-          <Button onClick={() => setCreateOpen(true)} className="gap-1.5 shrink-0">
+          <Button onClick={() => setCreateOpen(true)} className="w-full gap-1.5 sm:w-auto sm:shrink-0">
             <Plus className="h-4 w-4" />
             新增支出
           </Button>
@@ -246,7 +258,7 @@ export function ExpenseTable({ timezone }: Props) {
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">金額範圍 (RM)</label>
-                <div className="flex gap-2 items-center">
+                <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
                   <Input
                     type="number"
                     min="0"
@@ -254,7 +266,7 @@ export function ExpenseTable({ timezone }: Props) {
                     placeholder="最小"
                     value={draftMinAmount}
                     onChange={(e) => setDraftMinAmount(e.target.value)}
-                    className="w-24"
+                    className="min-w-0"
                   />
                   <span className="text-muted-foreground text-sm">–</span>
                   <Input
@@ -264,7 +276,7 @@ export function ExpenseTable({ timezone }: Props) {
                     placeholder="最大"
                     value={draftMaxAmount}
                     onChange={(e) => setDraftMaxAmount(e.target.value)}
-                    className="w-24"
+                    className="min-w-0"
                   />
                 </div>
               </div>
@@ -283,7 +295,7 @@ export function ExpenseTable({ timezone }: Props) {
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border bg-card overflow-hidden">
+      <div className="hidden rounded-xl border bg-card overflow-hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -316,7 +328,10 @@ export function ExpenseTable({ timezone }: Props) {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col gap-0.5">
-                      <Badge variant="outline" className="w-fit text-xs">{exp.category}</Badge>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant="outline" className="w-fit text-xs">{exp.category}</Badge>
+                        <AttachmentCountBadge count={exp.attachment_count} />
+                      </div>
                       {exp.sub_category && (
                         <span className="text-xs text-muted-foreground">{exp.sub_category}</span>
                       )}
@@ -362,6 +377,68 @@ export function ExpenseTable({ timezone }: Props) {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      <div className="space-y-3 md:hidden">
+        {loading ? (
+          <div className="rounded-lg border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+            載入中…
+          </div>
+        ) : expenses.length === 0 ? (
+          <div className="rounded-lg border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
+            {appliedSearch || activeFilterCount > 0 ? "找不到符合的記錄" : "尚無支出記錄"}
+          </div>
+        ) : (
+          expenses.map((exp) => (
+            <div key={exp.id} className="rounded-lg border bg-card p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant="outline" className="text-xs">{exp.category}</Badge>
+                    {exp.sub_category && (
+                      <Badge variant="secondary" className="text-xs">{exp.sub_category}</Badge>
+                    )}
+                    <AttachmentCountBadge count={exp.attachment_count} />
+                  </div>
+                  <p className="truncate text-sm font-medium">{exp.description}</p>
+                  <p className="text-xs text-muted-foreground">{formatDate(exp.date)}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="font-mono text-base font-semibold">RM {exp.amount.toFixed(2)}</p>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="icon" variant="ghost" className="mt-1 h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openAttachments(exp)}>
+                        <Paperclip className="h-3.5 w-3.5 mr-2" />
+                        查看附件
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setEditExpense(exp)}>
+                        <Pencil className="h-3.5 w-3.5 mr-2" />
+                        編輯
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive"
+                        onClick={() => setDeleteTarget(exp)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />
+                        刪除
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+              {exp.remark && (
+                <p className="mt-3 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+                  {exp.remark}
+                </p>
+              )}
+            </div>
+          ))
+        )}
       </div>
 
       {/* Pagination */}
@@ -415,7 +492,19 @@ export function ExpenseTable({ timezone }: Props) {
               <p className="text-sm text-muted-foreground">{viewAttachmentsExpense.description}</p>
               <AttachmentList
                 attachments={attachments}
-                onDeleted={(id) => setAttachments((prev) => prev.filter((a) => a.id !== id))}
+                onDeleted={(id) => {
+                  setAttachments((prev) => prev.filter((a) => a.id !== id))
+                  setExpenses((prev) =>
+                    prev.map((expense) =>
+                      expense.id === viewAttachmentsExpense.id
+                        ? {
+                            ...expense,
+                            attachment_count: Math.max(0, expense.attachment_count - 1),
+                          }
+                        : expense
+                    )
+                  )
+                }}
               />
             </div>
           )}

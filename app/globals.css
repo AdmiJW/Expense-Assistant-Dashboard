@@ -119,20 +119,28 @@
   }
 
   .dashboard-bg {
-    background: linear-gradient(
-      135deg,
-      oklch(0.97 0.005 264) 0%,
-      oklch(0.985 0.003 200) 50%,
-      oklch(0.975 0.004 240) 100%
-    );
+    background-color: #F6F9FA;
+    background-image:
+      linear-gradient(30deg, #efefef 12%, transparent 12.5%, transparent 87%, #efefef 87.5%, #efefef),
+      linear-gradient(150deg, #efefef 12%, transparent 12.5%, transparent 87%, #efefef 87.5%, #efefef),
+      linear-gradient(30deg, #efefef 12%, transparent 12.5%, transparent 87%, #efefef 87.5%, #efefef),
+      linear-gradient(150deg, #efefef 12%, transparent 12.5%, transparent 87%, #efefef 87.5%, #efefef),
+      linear-gradient(60deg, #efefef77 25%, transparent 25.5%, transparent 75%, #efefef77 75%, #efefef77),
+      linear-gradient(60deg, #efefef77 25%, transparent 25.5%, transparent 75%, #efefef77 75%, #efefef77);
+    background-position: 0 0, 0 0, 27px 47px, 27px 47px, 0 0, 27px 47px;
+    background-size: 54px 95px;
   }
 
   .dark .dashboard-bg {
-    background: linear-gradient(
-      135deg,
-      oklch(0.13 0.012 264) 0%,
-      oklch(0.15 0.008 230) 50%,
-      oklch(0.14 0.010 260) 100%
-    );
+    background-color: oklch(0.13 0.008 260);
+    background-image:
+      linear-gradient(30deg, oklch(1 0 0 / 6%) 12%, transparent 12.5%, transparent 87%, oklch(1 0 0 / 6%) 87.5%, oklch(1 0 0 / 6%)),
+      linear-gradient(150deg, oklch(1 0 0 / 6%) 12%, transparent 12.5%, transparent 87%, oklch(1 0 0 / 6%) 87.5%, oklch(1 0 0 / 6%)),
+      linear-gradient(30deg, oklch(1 0 0 / 6%) 12%, transparent 12.5%, transparent 87%, oklch(1 0 0 / 6%) 87.5%, oklch(1 0 0 / 6%)),
+      linear-gradient(150deg, oklch(1 0 0 / 6%) 12%, transparent 12.5%, transparent 87%, oklch(1 0 0 / 6%) 87.5%, oklch(1 0 0 / 6%)),
+      linear-gradient(60deg, oklch(1 0 0 / 4%) 25%, transparent 25.5%, transparent 75%, oklch(1 0 0 / 4%) 75%, oklch(1 0 0 / 4%)),
+      linear-gradient(60deg, oklch(1 0 0 / 4%) 25%, transparent 25.5%, transparent 75%, oklch(1 0 0 / 4%) 75%, oklch(1 0 0 / 4%));
+    background-position: 0 0, 0 0, 27px 47px, 27px 47px, 0 0, 27px 47px;
+    background-size: 54px 95px;
   }
 }
