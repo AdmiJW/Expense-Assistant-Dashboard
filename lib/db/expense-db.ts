@@ -1,6 +1,14 @@
 import Database from "better-sqlite3"
 import { formatInTimeZone } from "date-fns-tz"
 import { getExpenseDbPath } from "@/lib/paths"
+import { getCategoryAliases, normalizeCategory } from "@/lib/categories"
+import {
+  createEmptyChartTotals,
+  getChartBucket,
+  getChartBuckets,
+  type ChartGroupBy,
+  type ChartTotal,
+} from "@/lib/stats-buckets"
 
 export interface Expense {
   id: string
@@ -67,7 +75,11 @@ export function getExpenses(
   }
   if (dateFrom) { conditions.push("e.date >= ?"); params.push(dateFrom) }
   if (dateTo)   { conditions.push("e.date <= ?"); params.push(dateTo) }
-  if (category) { conditions.push("e.category = ?"); params.push(category) }
+  if (category) {
+    const aliases = getCategoryAliases(category)
+    conditions.push(`e.category IN (${aliases.map(() => "?").join(", ")})`)
+    params.push(...aliases)
+  }
   if (minAmount !== undefined) { conditions.push("e.amount >= ?"); params.push(minAmount) }
   if (maxAmount !== undefined) { conditions.push("e.amount <= ?"); params.push(maxAmount) }
 
@@ -165,10 +177,7 @@ export function deleteAttachmentRow(id: string): void {
   getDb().prepare("DELETE FROM expense_attachments WHERE id = ?").run(id)
 }
 
-export interface DailyTotal {
-  day: string
-  total: number
-}
+export type { ChartGroupBy, ChartTotal }
 
 export interface CategoryTotal {
   category: string
@@ -181,32 +190,16 @@ export interface DashboardStatsOptions {
   chartStartDateStr: string // YYYY-MM-DD in display tz — first day shown on bar chart
   chartEndDateStr: string   // YYYY-MM-DD in display tz — last day shown on bar chart
   timezone: string
-}
-
-function fillDailyTotals(
-  sparse: DailyTotal[],
-  startDateStr: string,
-  endDateStr: string
-): DailyTotal[] {
-  const map = new Map(sparse.map((d) => [d.day, d.total]))
-  const result: DailyTotal[] = []
-  const cursor = new Date(startDateStr + "T00:00:00Z")
-  const end = new Date(endDateStr + "T00:00:00Z")
-  while (cursor <= end) {
-    const key = cursor.toISOString().slice(0, 10)
-    result.push({ day: key, total: map.get(key) ?? 0 })
-    cursor.setUTCDate(cursor.getUTCDate() + 1)
-  }
-  return result
+  groupBy: ChartGroupBy
 }
 
 export function getDashboardStats(opts: DashboardStatsOptions): {
   rangeTotal: number
-  dailyTotals: DailyTotal[]
+  chartTotals: ChartTotal[]
   categoryTotals: CategoryTotal[]
 } {
   const db = getDb()
-  const { rangeStart, rangeEnd, chartStartDateStr, chartEndDateStr, timezone } = opts
+  const { rangeStart, rangeEnd, chartStartDateStr, chartEndDateStr, timezone, groupBy } = opts
 
   const { rangeTotal } = db
     .prepare(
@@ -222,20 +215,21 @@ export function getDashboardStats(opts: DashboardStatsOptions): {
     )
     .all(rangeStart, rangeEnd) as Pick<Expense, "date" | "amount">[]
 
-  const localDailyTotals = new Map<string, number>()
+  const chartMap = createEmptyChartTotals(chartStartDateStr, chartEndDateStr, groupBy)
   for (const row of dailyRows) {
-    const day = formatInTimeZone(new Date(row.date), timezone, "yyyy-MM-dd")
-    localDailyTotals.set(day, (localDailyTotals.get(day) ?? 0) + row.amount)
+    const localDay = formatInTimeZone(new Date(row.date), timezone, "yyyy-MM-dd")
+    const bucket = getChartBucket(localDay, groupBy)
+    if (chartMap.has(bucket.key)) {
+      const current = chartMap.get(bucket.key)!
+      chartMap.set(bucket.key, { ...current, total: current.total + row.amount })
+    }
   }
 
-  const sparseDailyTotals = Array.from(localDailyTotals, ([day, total]) => ({
-    day,
-    total,
-  })).sort((a, b) => a.day.localeCompare(b.day))
+  const chartTotals = getChartBuckets(chartStartDateStr, chartEndDateStr, groupBy).map(
+    (bucket) => chartMap.get(bucket.key) ?? bucket
+  )
 
-  const dailyTotals = fillDailyTotals(sparseDailyTotals, chartStartDateStr, chartEndDateStr)
-
-  const categoryTotals = db
+  const categoryRows = db
     .prepare(
       `SELECT category, SUM(amount) as total
        FROM expenses WHERE date >= ? AND date < ?
@@ -244,5 +238,15 @@ export function getDashboardStats(opts: DashboardStatsOptions): {
     )
     .all(rangeStart, rangeEnd) as CategoryTotal[]
 
-  return { rangeTotal, dailyTotals, categoryTotals }
+  const categoryMap = new Map<string, number>()
+  for (const row of categoryRows) {
+    const category = normalizeCategory(row.category)
+    categoryMap.set(category, (categoryMap.get(category) ?? 0) + row.total)
+  }
+  const categoryTotals = Array.from(categoryMap, ([category, total]) => ({
+    category,
+    total,
+  })).sort((a, b) => b.total - a.total)
+
+  return { rangeTotal, chartTotals, categoryTotals }
 }

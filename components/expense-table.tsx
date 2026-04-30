@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ExpenseForm } from "@/components/expense-form"
 import { AttachmentList } from "@/components/attachment-list"
+import { CategoryBadge, getCategoryPresentation } from "@/components/category-presentation"
 import { formatChineseDateTime } from "@/lib/date-format"
 import { toast } from "sonner"
 import {
@@ -250,9 +251,17 @@ export function ExpenseTable({ timezone }: Props) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">全部類別</SelectItem>
-                    {EXPENSE_CATEGORIES.map((cat) => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                    ))}
+                    {EXPENSE_CATEGORIES.map((cat) => {
+                      const Icon = getCategoryPresentation(cat).icon
+                      return (
+                        <SelectItem key={cat} value={cat}>
+                          <span className="inline-flex items-center gap-2">
+                            <Icon className="h-3.5 w-3.5" />
+                            {cat}
+                          </span>
+                        </SelectItem>
+                      )
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -329,7 +338,7 @@ export function ExpenseTable({ timezone }: Props) {
                   <TableCell>
                     <div className="flex flex-col gap-0.5">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge variant="outline" className="w-fit text-xs">{exp.category}</Badge>
+                        <CategoryBadge category={exp.category} className="text-xs" />
                         <AttachmentCountBadge count={exp.attachment_count} />
                       </div>
                       {exp.sub_category && (
@@ -394,7 +403,7 @@ export function ExpenseTable({ timezone }: Props) {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge variant="outline" className="text-xs">{exp.category}</Badge>
+                    <CategoryBadge category={exp.category} className="text-xs" />
                     {exp.sub_category && (
                       <Badge variant="secondary" className="text-xs">{exp.sub_category}</Badge>
                     )}

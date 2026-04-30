@@ -5,6 +5,8 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -12,52 +14,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
-import {
-  Car,
-  CircleEllipsis,
-  Coffee,
-  Gamepad2,
-  HeartPulse,
-  House,
-  Plane,
-  ShoppingBag,
-  Smartphone,
-  Utensils,
-  type LucideIcon,
-} from "lucide-react"
-import { EXPENSE_CATEGORIES } from "@/lib/categories"
-import { formatChineseDate, formatCompactChineseDate } from "@/lib/date-format"
-
-const COLORS = [
-  "#6366f1",
-  "#f59e0b",
-  "#10b981",
-  "#ef4444",
-  "#8b5cf6",
-  "#ec4899",
-  "#14b8a6",
-  "#f97316",
-  "#3b82f6",
-  "#a3e635",
-]
-
-const CATEGORY_ICONS: Record<(typeof EXPENSE_CATEGORIES)[number], LucideIcon> = {
-  食物: Utensils,
-  飲料: Coffee,
-  交通: Car,
-  購物: ShoppingBag,
-  娛樂: Gamepad2,
-  居家: House,
-  數位產品: Smartphone,
-  醫療: HeartPulse,
-  旅行: Plane,
-  其他: CircleEllipsis,
-}
-
-interface DailyTotal {
-  day: string
-  total: number
-}
+import { getCategoryPresentation } from "@/components/category-presentation"
+import type { ChartGroupBy, ChartTotal } from "@/lib/stats-buckets"
 
 interface CategoryTotal {
   category: string
@@ -65,52 +23,78 @@ interface CategoryTotal {
 }
 
 interface Props {
-  dailyTotals: DailyTotal[]
+  chartTotals: ChartTotal[]
   categoryTotals: CategoryTotal[]
+  chartType: "bar" | "line"
+  groupBy: ChartGroupBy
   rangeLabel?: string
 }
 
-export function DashboardCharts({ dailyTotals, categoryTotals, rangeLabel }: Props) {
-  const dayCount = dailyTotals.length
-  const tickInterval = dayCount <= 7 ? 0 : dayCount <= 14 ? 1 : 4
+function getInterval(count: number) {
+  if (count <= 8) return 0
+  if (count <= 16) return 1
+  return Math.ceil(count / 8)
+}
+
+function getGroupLabel(groupBy: ChartGroupBy) {
+  if (groupBy === "week") return "每週支出"
+  if (groupBy === "month") return "每月支出"
+  return "每日支出"
+}
+
+export function DashboardCharts({
+  chartTotals,
+  categoryTotals,
+  chartType,
+  groupBy,
+  rangeLabel,
+}: Props) {
+  const tickInterval = getInterval(chartTotals.length)
   const categoryTotal = categoryTotals.reduce((sum, item) => sum + item.total, 0)
 
-  function getCategoryIcon(category: string) {
-    return CATEGORY_ICONS[category as keyof typeof CATEGORY_ICONS] ?? CircleEllipsis
-  }
-
-  function getCategoryColor(index: number) {
-    return COLORS[index % COLORS.length]
-  }
+  const axis = (
+    <>
+      <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+      <XAxis dataKey="label" tick={{ fontSize: 11 }} interval={tickInterval} />
+      <YAxis tick={{ fontSize: 11 }} tickFormatter={(value: number) => `RM${value}`} />
+      <Tooltip
+        formatter={(value) => [`RM ${Number(value).toFixed(2)}`, "支出"]}
+        labelFormatter={(label) => `期間：${label}`}
+      />
+    </>
+  )
 
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
       <div className="rounded-lg border bg-card p-4 shadow-sm md:p-5">
         <h2 className="mb-4 text-sm font-semibold text-muted-foreground">
-          {rangeLabel ? `每日支出 · ${rangeLabel}` : "近 30 天每日支出"}
+          {rangeLabel ? `${getGroupLabel(groupBy)} · ${rangeLabel}` : getGroupLabel(groupBy)}
         </h2>
         <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={dailyTotals} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis
-              dataKey="day"
-              tick={{ fontSize: 11 }}
-              tickFormatter={(value: string) => formatCompactChineseDate(value)}
-              interval={tickInterval}
-            />
-            <YAxis tick={{ fontSize: 11 }} tickFormatter={(value: number) => `RM${value}`} />
-            <Tooltip
-              formatter={(value) => [`RM ${Number(value).toFixed(2)}`, "支出"]}
-              labelFormatter={(label) => `日期：${formatChineseDate(String(label))}`}
-            />
-            <Bar dataKey="total" fill="#6366f1" radius={[4, 4, 0, 0]} />
-          </BarChart>
+          {chartType === "line" ? (
+            <LineChart data={chartTotals} margin={{ top: 8, right: 14, left: 0, bottom: 0 }}>
+              {axis}
+              <Line
+                type="monotone"
+                dataKey="total"
+                stroke="var(--primary)"
+                strokeWidth={3}
+                dot={{ r: 3, strokeWidth: 2, fill: "var(--card)" }}
+                activeDot={{ r: 5 }}
+              />
+            </LineChart>
+          ) : (
+            <BarChart data={chartTotals} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+              {axis}
+              <Bar dataKey="total" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          )}
         </ResponsiveContainer>
       </div>
 
       <div className="rounded-lg border bg-card p-4 shadow-sm md:p-5">
         <h2 className="mb-4 text-sm font-semibold text-muted-foreground">
-          {rangeLabel ? `支出分類 · ${rangeLabel}` : "本月支出分類"}
+          {rangeLabel ? `支出分類 · ${rangeLabel}` : "支出分類"}
         </h2>
         {categoryTotals.length === 0 ? (
           <div className="flex h-65 items-center justify-center text-sm text-muted-foreground">
@@ -133,8 +117,8 @@ export function DashboardCharts({ dailyTotals, categoryTotals, rangeLabel }: Pro
                     label={false}
                     labelLine={false}
                   >
-                    {categoryTotals.map((_, index) => (
-                      <Cell key={index} fill={getCategoryColor(index)} />
+                    {categoryTotals.map((item) => (
+                      <Cell key={item.category} fill={getCategoryPresentation(item.category).color} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -155,8 +139,9 @@ export function DashboardCharts({ dailyTotals, categoryTotals, rangeLabel }: Pro
             </div>
 
             <div className="space-y-2">
-              {categoryTotals.map((item, index) => {
-                const Icon = getCategoryIcon(item.category)
+              {categoryTotals.map((item) => {
+                const presentation = getCategoryPresentation(item.category)
+                const Icon = presentation.icon
                 const percent = categoryTotal > 0 ? (item.total / categoryTotal) * 100 : 0
                 return (
                   <div
@@ -165,7 +150,7 @@ export function DashboardCharts({ dailyTotals, categoryTotals, rangeLabel }: Pro
                   >
                     <div
                       className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-white"
-                      style={{ backgroundColor: getCategoryColor(index) }}
+                      style={{ backgroundColor: presentation.color }}
                     >
                       <Icon className="h-4 w-4" />
                     </div>
@@ -179,10 +164,7 @@ export function DashboardCharts({ dailyTotals, categoryTotals, rangeLabel }: Pro
                       <div className="mt-1 h-1.5 rounded-full bg-muted">
                         <div
                           className="h-full rounded-full"
-                          style={{
-                            width: `${percent}%`,
-                            backgroundColor: getCategoryColor(index),
-                          }}
+                          style={{ width: `${percent}%`, backgroundColor: presentation.color }}
                         />
                       </div>
                     </div>

@@ -1,11 +1,17 @@
 export const runtime = "nodejs"
 
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/auth"
-import { getDashboardStats } from "@/lib/db/expense-db"
+import { auth, isDemoSession } from "@/auth"
+import { getDashboardStats, type ChartGroupBy } from "@/lib/db/expense-db"
+import { getDemoDashboardStats } from "@/lib/demo-data"
 import { DISPLAY_TIMEZONE } from "@/lib/timezone"
 import { toZonedTime, fromZonedTime } from "date-fns-tz"
 import { startOfDay, startOfMonth, addMonths, addDays, format, parseISO } from "date-fns"
+
+function parseGroupBy(value: string | null): ChartGroupBy {
+  if (value === "week" || value === "month") return value
+  return "day"
+}
 
 export async function GET(req: NextRequest) {
   const session = await auth()
@@ -14,6 +20,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const fromParam = searchParams.get("from") // YYYY-MM-DD in display timezone
   const toParam = searchParams.get("to")     // YYYY-MM-DD in display timezone
+  const groupBy = parseGroupBy(searchParams.get("groupBy"))
 
   let rangeStart: string
   let rangeEnd: string
@@ -44,16 +51,21 @@ export async function GET(req: NextRequest) {
     chartEndDateStr = format(todayLocalStart, "yyyy-MM-dd")
   }
 
-  const stats = getDashboardStats({
+  const statsInput = {
     rangeStart,
     rangeEnd,
     chartStartDateStr,
     chartEndDateStr,
     timezone: DISPLAY_TIMEZONE,
-  })
+    groupBy,
+  }
+  const stats = isDemoSession(session)
+    ? getDemoDashboardStats(statsInput)
+    : getDashboardStats(statsInput)
 
   return NextResponse.json({
     ...stats,
+    dailyTotals: stats.chartTotals.map((item) => ({ day: item.key, total: item.total })),
     chartStartDateStr,
     chartEndDateStr,
   })

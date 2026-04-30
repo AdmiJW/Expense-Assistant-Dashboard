@@ -3,6 +3,7 @@ import { Noto_Sans_TC, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
 import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeColorProvider } from "@/components/theme-color-provider"
 
 const notoSansTC = Noto_Sans_TC({
   variable: "--font-noto-sans-tc",
@@ -34,8 +35,10 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
-          {children}
-          <Toaster richColors position="top-right" />
+          <ThemeColorProvider>
+            {children}
+            <Toaster richColors position="top-right" />
+          </ThemeColorProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/select"
 import { toast } from "sonner"
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz"
-import { EXPENSE_CATEGORIES } from "@/lib/categories"
+import { EXPENSE_CATEGORIES, normalizeCategory } from "@/lib/categories"
+import { getCategoryPresentation } from "@/components/category-presentation"
 
 interface Expense {
   id: string
@@ -66,7 +67,9 @@ export function ExpenseForm({ expense, timezone, onSuccess, onCancel }: Props) {
     defaultValues: {
       amount: expense ? String(expense.amount) : "",
       date: defaultDatetime,
-      category: (expense?.category as (typeof EXPENSE_CATEGORIES)[number]) ?? undefined,
+      category: expense
+        ? (normalizeCategory(expense.category) as (typeof EXPENSE_CATEGORIES)[number])
+        : undefined,
       sub_category: expense?.sub_category ?? "",
       description: expense?.description ?? "",
       remark: expense?.remark ?? "",
@@ -141,9 +144,17 @@ export function ExpenseForm({ expense, timezone, onSuccess, onCancel }: Props) {
                   <SelectValue placeholder="選擇類別…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {EXPENSE_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
+                  {EXPENSE_CATEGORIES.map((cat) => {
+                    const Icon = getCategoryPresentation(cat).icon
+                    return (
+                      <SelectItem key={cat} value={cat}>
+                        <span className="inline-flex items-center gap-2">
+                          <Icon className="h-3.5 w-3.5" />
+                          {cat}
+                        </span>
+                      </SelectItem>
+                    )
+                  })}
                 </SelectContent>
               </Select>
             )}

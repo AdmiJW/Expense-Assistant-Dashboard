@@ -1,13 +1,17 @@
 export const runtime = "nodejs"
 
 import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/auth"
+import { auth, isDemoSession } from "@/auth"
 import { findUserByUsername, updateUserPassword } from "@/lib/db/auth-db"
+import { DEMO_WRITE_ERROR } from "@/lib/demo-constants"
 import bcrypt from "bcryptjs"
 
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (isDemoSession(session)) {
+    return NextResponse.json({ error: DEMO_WRITE_ERROR }, { status: 403 })
+  }
 
   const { currentPassword, newPassword } = await req.json()
   if (!currentPassword || !newPassword) {
