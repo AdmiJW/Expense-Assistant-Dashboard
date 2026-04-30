@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { format, startOfWeek, startOfMonth, addDays, subDays } from "date-fns"
+import { format, startOfWeek, startOfMonth, subDays } from "date-fns"
 import { toZonedTime } from "date-fns-tz"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -89,6 +89,7 @@ export function DashboardShell() {
   }, [getRange])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (preset !== "custom") fetchStats()
   }, [preset, fetchStats])
 

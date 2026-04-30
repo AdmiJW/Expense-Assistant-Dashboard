@@ -1,4 +1,5 @@
 import Database from "better-sqlite3"
+import { formatInTimeZone } from "date-fns-tz"
 import { getExpenseDbPath } from "@/lib/paths"
 
 export interface Expense {
@@ -164,6 +165,7 @@ export interface DashboardStatsOptions {
   rangeEnd: string          // UTC ISO — end of selected period (exclusive)
   chartStartDateStr: string // YYYY-MM-DD in display tz — first day shown on bar chart
   chartEndDateStr: string   // YYYY-MM-DD in display tz — last day shown on bar chart
+  timezone: string
 }
 
 function fillDailyTotals(
@@ -189,7 +191,7 @@ export function getDashboardStats(opts: DashboardStatsOptions): {
   categoryTotals: CategoryTotal[]
 } {
   const db = getDb()
-  const { rangeStart, rangeEnd, chartStartDateStr, chartEndDateStr } = opts
+  const { rangeStart, rangeEnd, chartStartDateStr, chartEndDateStr, timezone } = opts
 
   const { rangeTotal } = db
     .prepare(
@@ -197,14 +199,24 @@ export function getDashboardStats(opts: DashboardStatsOptions): {
     )
     .get(rangeStart, rangeEnd) as { rangeTotal: number }
 
-  const sparseDailyTotals = db
+  const dailyRows = db
     .prepare(
-      `SELECT strftime('%Y-%m-%d', date) as day, SUM(amount) as total
+      `SELECT date, amount
        FROM expenses WHERE date >= ? AND date < ?
-       GROUP BY strftime('%Y-%m-%d', date)
-       ORDER BY day ASC`
+       ORDER BY date ASC`
     )
-    .all(rangeStart, rangeEnd) as DailyTotal[]
+    .all(rangeStart, rangeEnd) as Pick<Expense, "date" | "amount">[]
+
+  const localDailyTotals = new Map<string, number>()
+  for (const row of dailyRows) {
+    const day = formatInTimeZone(new Date(row.date), timezone, "yyyy-MM-dd")
+    localDailyTotals.set(day, (localDailyTotals.get(day) ?? 0) + row.amount)
+  }
+
+  const sparseDailyTotals = Array.from(localDailyTotals, ([day, total]) => ({
+    day,
+    total,
+  })).sort((a, b) => a.day.localeCompare(b.day))
 
   const dailyTotals = fillDailyTotals(sparseDailyTotals, chartStartDateStr, chartEndDateStr)
 

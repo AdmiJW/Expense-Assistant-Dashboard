@@ -23,7 +23,6 @@ export async function GET(req: NextRequest) {
   if (fromParam && toParam) {
     // Custom range: from = start of fromParam day, to = end of toParam day
     const fromLocal = parseISO(fromParam + "T00:00:00")
-    const toLocal = parseISO(toParam + "T23:59:59")
     rangeStart = fromZonedTime(fromLocal, DISPLAY_TIMEZONE).toISOString()
     // rangeEnd is exclusive, so use start of next day after toParam
     const toNextDayLocal = addDays(parseISO(toParam + "T00:00:00"), 1)
@@ -45,7 +44,13 @@ export async function GET(req: NextRequest) {
     chartEndDateStr = format(todayLocalStart, "yyyy-MM-dd")
   }
 
-  const stats = getDashboardStats({ rangeStart, rangeEnd, chartStartDateStr, chartEndDateStr })
+  const stats = getDashboardStats({
+    rangeStart,
+    rangeEnd,
+    chartStartDateStr,
+    chartEndDateStr,
+    timezone: DISPLAY_TIMEZONE,
+  })
 
   return NextResponse.json({
     ...stats,

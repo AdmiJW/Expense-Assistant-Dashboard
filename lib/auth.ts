@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs"
 import { findUserByUsername } from "@/lib/db/auth-db"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  basePath: "/api/auth",
+  trustHost: true,
   providers: [
     Credentials({
       credentials: {
@@ -28,4 +30,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
+  callbacks: {
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`
+
+      try {
+        const redirectUrl = new URL(url)
+        if (redirectUrl.origin === baseUrl) return url
+      } catch {
+        return baseUrl
+      }
+
+      return baseUrl
+    },
+  },
 })

@@ -1,5 +1,6 @@
 import { signOut } from "@/auth"
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { LayoutDashboard, Receipt, Settings, LogOut, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -38,7 +39,8 @@ export function Sidebar({ userName }: Props) {
         <form
           action={async () => {
             "use server"
-            await signOut({ redirectTo: "/login" })
+            await signOut({ redirect: false })
+            redirect("/login")
           }}
         >
           <Button

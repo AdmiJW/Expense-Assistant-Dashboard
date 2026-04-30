@@ -66,7 +66,9 @@ ENV HOSTNAME="0.0.0.0"
 #   EXPENSE_DB_PATH       absolute path inside the container
 #   AUTH_DB_PATH          absolute path inside the container
 #   ATTACHMENTS_DIR_PATH  absolute path inside the container
-#   NEXTAUTH_SECRET       random secret (openssl rand -base64 32)
+#   NEXTAUTH_SECRET       stable random secret (openssl rand -base64 32)
+#   AUTH_URL              public app origin, e.g. https://expenses.admijw.xyz
+#   AUTH_TRUST_HOST       true when behind a trusted reverse proxy
 #   NEXT_PUBLIC_DISPLAY_TIMEZONE  e.g. Asia/Kuala_Lumpur
 
 CMD ["node", "server.js"]

@@ -121,7 +121,10 @@ export function ExpenseTable({ timezone }: Props) {
     setLoading(false)
   }, [page, appliedSearch, appliedDateFrom, appliedDateTo, appliedCategory, appliedMinAmount, appliedMaxAmount, timezone])
 
-  useEffect(() => { fetchExpenses() }, [fetchExpenses])
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchExpenses()
+  }, [fetchExpenses])
 
   async function openAttachments(expense: Expense) {
     setViewAttachmentsExpense(expense)

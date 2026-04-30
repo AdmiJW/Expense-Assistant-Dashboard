@@ -167,7 +167,11 @@ Create `.env.local` in the project root. This file is gitignored and must never 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 # Required in all environments.
 # Generate a secret: openssl rand -base64 32
+# Keep this value stable between container restarts or all sessions are invalidated.
 NEXTAUTH_SECRET=change-me-in-production
+# Production domain used by Auth.js when deployed behind a reverse proxy.
+# AUTH_URL=https://expenses.admijw.xyz
+# AUTH_TRUST_HOST=true
 
 # ── Timezone ──────────────────────────────────────────────────────────────────
 # IANA timezone identifier used for all date display and input conversion.
@@ -191,6 +195,8 @@ NEXT_PUBLIC_DISPLAY_TIMEZONE=Asia/Kuala_Lumpur
 |---|---|---|---|
 | `NEXTAUTH_SECRET` | Yes | — | JWT signing secret. Generate: `openssl rand -base64 32` |
 | `DISPLAY_TIMEZONE` | Yes | `Asia/Kuala_Lumpur` | Server-side timezone for date queries |
+| `AUTH_URL` | Recommended in prod | — | Public production origin for Auth.js redirects, e.g. `https://expenses.admijw.xyz`. |
+| `AUTH_TRUST_HOST` | Recommended in prod | — | Set to `true` when running behind a trusted reverse proxy. |
 | `NEXT_PUBLIC_DISPLAY_TIMEZONE` | Yes | `Asia/Kuala_Lumpur` | Client-side timezone (settings page display) |
 | `EXPENSE_DB_PATH` | Yes | `./expenses.db` | Absolute path to the expense SQLite file |
 | `AUTH_DB_PATH` | Yes | `./auth.db` | Absolute path to the auth SQLite file |
@@ -322,6 +328,8 @@ docker run -d \
   --name expense-dashboard \
   -p 3000:3000 \
   -e NEXTAUTH_SECRET="$(openssl rand -base64 32)" \
+  -e AUTH_URL="https://expenses.admijw.xyz" \
+  -e AUTH_TRUST_HOST="true" \
   -e DISPLAY_TIMEZONE="Asia/Kuala_Lumpur" \
   -e NEXT_PUBLIC_DISPLAY_TIMEZONE="Asia/Kuala_Lumpur" \
   -e EXPENSE_DB_PATH="/data/expenses.db" \
@@ -346,6 +354,8 @@ services:
     environment:
       NODE_ENV: production
       NEXTAUTH_SECRET: "${NEXTAUTH_SECRET}"
+      AUTH_URL: https://expenses.admijw.xyz
+      AUTH_TRUST_HOST: "true"
       DISPLAY_TIMEZONE: Asia/Kuala_Lumpur
       NEXT_PUBLIC_DISPLAY_TIMEZONE: Asia/Kuala_Lumpur
       EXPENSE_DB_PATH: /data/expenses.db
@@ -360,6 +370,8 @@ Store secrets in a `.env` file next to `docker-compose.yml` (not committed):
 ```env
 NEXTAUTH_SECRET=your-long-random-secret
 ```
+
+Generate `NEXTAUTH_SECRET` once and keep it unchanged across deployments; changing it invalidates existing sessions.
 
 ### Seed in Docker
 
